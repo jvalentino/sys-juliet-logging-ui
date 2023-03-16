@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana-deployment
+  labels:
+    app: kibana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      volumes:
+      - name: config-volume
+        configMap:
+         name: kibana-config
+      containers:
+      - name: kibana
+        volumeMounts:
+        - name: config-volume
+          mountPath: /usr/share/kibana/config/kibana.yml
+          subPath: kibana.yml
+        env:
+        - name: ELASTICSEARCH_URL
+          value: http://elasticsearch-master:9200
+        image: docker.elastic.co/kibana/kibana:8.5.1
+        ports:
+        - containerPort: 5601
+          name: webinterface
+     
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana
+  labels:
+    service: kibana
+spec:
+  type: NodePort
+  ports:
+  - port: 5601
+    name: webinterface
+  selector:
+    app: kibana
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kibana-config
+  labels:
+    app: kibana
+    env: dev
+data:
+  kibana.yml: |- 
+    server.host: 0.0.0.0
+    server.shutdownTimeout: 5s
+    elasticsearch.hosts: ['http://elasticsearch-master:9200']
+    monitoring.ui.container.elasticsearch.enabled: true
